@@ -1,0 +1,21 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "redacted",
+                "Name": "lukasjoc <github.com/lukasjoc>"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "Activitywatch widget",
+        "Icon": "battery",
+        "Id": "com.github.lukasjoc.activitywatch",
+        "Name": "Activitywatch",
+        "Version": "1",
+        "Website": "https://github.com/lukasjoc/plasmoid-activitywatch"
+    },
+    "X-Plasma-API": "declarativeappletscript",
+    "X-Plasma-MainScript": "ui/main.qml",
+    "KPackageStructure": "Plasma/Applet"
+}
+
