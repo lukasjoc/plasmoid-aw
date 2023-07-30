@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -19,7 +20,8 @@ import (
 //		}
 
 type EventData struct {
-	App string `json:"app"`
+	App   string `json:"app"`
+	Title string `json:"title"`
 }
 
 type Event struct {
@@ -30,8 +32,9 @@ type Event struct {
 }
 
 type Events struct {
-	Events []Event `json:"events"`
-	hours  []int
+	Events   []Event `json:"events"`
+	Duration float64 `json:"duration"`
+	hours    []int
 }
 
 func (e *Events) ByHours() map[int][]Event {
@@ -44,23 +47,41 @@ func (e *Events) ByHours() map[int][]Event {
 		}
 		byHours[hour] = append(byHours[hour], event)
 	}
+	sort.Ints(e.hours)
 	return byHours
+}
+
+func sumDurations(events []Event) (sum float64) {
+	for _, event := range events {
+		sum += event.Duration
+	}
+	return sum
 }
 
 func main() {
 	content, err := ioutil.ReadFile("data.json")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
 
-	var events Events
+	var events []Events
 	err = json.Unmarshal(content, &events)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
 
-	byHours := events.ByHours()
-	for _, hour := range events.hours {
-		fmt.Printf("%v %v\n\n", hour, byHours[hour])
+	byHours := events[0].ByHours()
+	// for _, hour := range events.hours {
+	//     for _, event := range byHours[hour] {
+	//         fmt.Printf("h:%d e:%v\n", hour, event.Timestamp)
+	//     }
+	// }
+	for _, hour := range events[0].hours {
+		summed := sumDurations(byHours[hour])
+		duration := time.Duration(summed) * time.Second
+		fmt.Printf("h:%v => d:%s\n", hour, duration.Round(duration))
 	}
+
+	total := time.Duration(events[0].Duration) * time.Second
+	fmt.Printf("total: d:%s\n", total.Round(total))
 }

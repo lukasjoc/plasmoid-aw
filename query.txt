@@ -1,25 +1,3 @@
-events = flood(query_bucket("aw-watcher-window_omega"));
-
-not_afk = flood(query_bucket("aw-watcher-afk_omega"));
-
-not_afk = filter_keyvals(not_afk, "status", ["not-afk"]);
-
-browser_events = [];
-
-audible_events = filter_keyvals(browser_events, "audible", [true]);
-
-not_afk = period_union(not_afk, audible_events);
-
-events = filter_period_intersect(events, not_afk);
-
-events = categorize(events, [[["Work"],{"type":"regex","regex":"Google Docs|libreoffice|ReText"}],[["Work","Programming"],{"type":"regex","regex":"GitHub|Stack Overflow|BitBucket|Gitlab|vim|Spyder|kate|Ghidra|Scite"}],[["Work","Programming","ActivityWatch"],{"type":"regex","regex":"ActivityWatch|aw-","ignore_case":true}],[["Work","Image"],{"type":"regex","regex":"Gimp|Inkscape"}],[["Work","Video"],{"type":"regex","regex":"Kdenlive"}],[["Work","Audio"],{"type":"regex","regex":"Audacity"}],[["Work","3D"],{"type":"regex","regex":"Blender"}],[["Media","Games"],{"type":"regex","regex":"Minecraft|RimWorld"}],[["Media","Video"],{"type":"regex","regex":"YouTube|Plex|VLC"}],[["Media","Social Media"],{"type":"regex","regex":"reddit|Facebook|Twitter|Instagram|devRant","ignore_case":true}],[["Media","Music"],{"type":"regex","regex":"Spotify|Deezer","ignore_case":true}],[["Comms","IM"],{"type":"regex","regex":"Messenger|Telegram|Signal|WhatsApp|Rambox|Slack|Riot|Element|Discord|Nheko"}],[["Comms","Email"],{"type":"regex","regex":"Gmail|Thunderbird|mutt|alpine"}]]);
-
-title_events = sort_by_duration(merge_events_by_keys(events, ["app", "title"]));
-
-app_events   = sort_by_duration(merge_events_by_keys(title_events, ["app"]));
-
-title_events  = limit_events(title_events, 100);
-
-duration = sum_durations(events);
-
-RETURN = {"events": app_events, "duration": duration};
+events = query_bucket("aw-watcher-window_omega");
+summed = sum_durations(events);
+RETURN = {"events": events, "duration": summed};
