@@ -1,23 +1,21 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"io/fs"
+	"net/http"
 	"os"
 	"sort"
 	"time"
 )
 
-// Example Event
-//	{
-//			"id": null,
-//			"timestamp": "2023-07-30T09:43:41.133000+00:00",
-//			"duration": 19947.299,
-//			"data": {
-//				"app": "Gnome-terminal"
-//			}
-//		}
+func fatal(err any) {
+	fmt.Fprintf(os.Stderr, "fatal: %v", err)
+	os.Exit(1)
+}
 
 type EventData struct {
 	App   string `json:"app"`
@@ -58,11 +56,65 @@ func sumDurations(events []Event) (sum float64) {
 	return sum
 }
 
+type QueryBuilder struct {
+	Query       []string `json:"query"`
+	TimePeriods []string `json:"timeperiods"`
+}
+
+func (q *QueryBuilder) Add(queryArgs ...string) {
+	for _, queryArg := range queryArgs {
+		fmt.Printf("Adding query: %v\n", queryArg)
+		q.Query = append(q.Query, queryArg)
+	}
+}
+
+func (q *QueryBuilder) Build() ([]byte, error) {
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	tomorrow := today.Add(24 * time.Hour)
+	period := fmt.Sprintf(
+		"%s/%s",
+		today.Format("2006-01-02T15:04:05-07:00"),
+		tomorrow.Format("2006-01-02T15:04:05-07:00"),
+	)
+	fmt.Printf("Adding timeperiod: %v\n", period)
+	q.TimePeriods = append(q.TimePeriods, period)
+	q.Add(";")
+	return json.Marshal(q)
+}
+
 func main() {
-	content, err := ioutil.ReadFile("data.json")
+	q := QueryBuilder{}
+	q.Add(
+		`events = query_bucket("aw-watcher-window_omega");`,
+		`summed = sum_durations(events);`,
+		`RETURN = {"events": events, "duration": summed};`,
+	)
+
+	body, err := q.Build()
+	if err != nil {
+		fatal(err)
+	}
+
+	res, err := http.Post(
+		"http://localhost:5600/api/0/query/", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		fatal(err)
+	}
+
+	defer res.Body.Close()
+	// b, err := httputil.DumpResponse(res, true)
+	// if err != nil {
+	//     fatal(err)
+	// }
+	// fmt.Printf(string(b))
+
+	content, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
+
+	os.WriteFile("resp.json", content, fs.ModePerm)
 
 	var events []Events
 	err = json.Unmarshal(content, &events)
@@ -84,4 +136,5 @@ func main() {
 
 	total := time.Duration(events[0].Duration) * time.Second
 	fmt.Printf("total: d:%s\n", total.Round(total))
+
 }

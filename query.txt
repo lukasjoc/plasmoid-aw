@@ -1,3 +1,0 @@
-events = query_bucket("aw-watcher-window_omega");
-summed = sum_durations(events);
-RETURN = {"events": events, "duration": summed};
