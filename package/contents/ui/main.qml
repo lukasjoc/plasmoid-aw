@@ -1,104 +1,107 @@
-import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.components 2.0 as PlasmaComponents
-import org.kde.plasma.plasmoid 2.0
 import QtQuick 2.11
 import QtQuick.Controls 2.11
-import QtQuick.Layouts 1.0
-import org.kde.quickcharts 1.0 as Charts
-import QtQuick.Window 2.11
-import org.kde.plasma.extras 2.0 as PlasmaExtras
-import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.2
-import org.kde.kirigami 2.4 as Kirigami
+import QtQuick.Window 2.11
 import org.kde.kquickcontrols 2.0
+import org.kde.plasma.extras 2.0 as PlasmaExtras
+import org.kde.plasma.plasmoid 2.0
 import org.kde.quickcharts 1.0 as Charts
 
-ColumnLayout {
-    spacing: 2
-
-    PlasmaExtras.Heading {
-        type: PlasmaExtras.Heading.Type.Primary
-        Layout.alignment: Qt.AlignRight
-        // Component.onCompleted: {
-        //     const r = new XMLHttpRequest()
-        //     // console.log("HEADING ANYONE?")
-        // }
-        // TODO: get from api dynamically and format
-        text: "5h 28m"
+Item {
+    function getHourlyData(cb) {
+        const req = new XMLHttpRequest();
+        req.onreadystatechange = () => {
+            if (req.readyState !== XMLHttpRequest.DONE) {
+                return
+            }
+            cb(JSON.parse(req.response))
+        }
+        req.open("GET", "http://localhost:3343/hourly");
+        req.send();
     }
 
-    Charts.BarChart {
-        id: barChart
-        barWidth: 5
-        spacing: 1
-        radius: 2
+    id: widget
 
-        width: 120
-        height: 120
-        backgroundColor: Qt.rgba(0.0, 0.0, 0.0, 0.1)
+    Plasmoid.preferredRepresentation: Plasmoid.compactRepresentation
+    Plasmoid.compactRepresentation: ColumnLayout {
+        spacing: 2
 
-        valueSources: [
-            Charts.ModelSource {
-                model: barModel
-                roleName: "usageMinutes"
+        RowLayout {
+            PlasmaExtras.Heading {
+                type: PlasmaExtras.Heading.Type.Primary
+                id: hoursAccumulated
+                Component.onCompleted: {
+                    getHourlyData((data) => {
+                        const accumulated = data.accumulated;
+                        const hours = Math.floor(accumulated / 60);
+                        const minutes = Math.round(accumulated % 60);
+                        const parts = [];
+                        if(hours > 0) {
+                            parts.push(hours + 'h')
+                        }
+                        if(minutes > 0) {
+                            parts.push(minutes + 'm')
+                        }
+                        hoursAccumulated.text = parts.join(" ")
+                    });
+                }
             }
-        ]
-
-        xRange {
-            // TODO: should be dynamic from usage data
-            from: 0; to: 14
-            automatic: false
-        }
-
-        yRange {
-            from: 0; to: 60
-            automatic: false
-        }
-
-        colorSource: Charts.ArraySource { array: ["#3b83f7"] }
-
-        ListModel {
-            id: barModel
-            Component.onCompleted: {
-                // TODO: cool XHRrequest works :0
-                console.log("HALLO DU SACK: ", typeof XMLHttpRequest)
-                const pool = [10, 50, 30, 25];
-                for(var i = 0; i < 12; i++) {
-                    const faked = pool[Math.floor(Math.random() * pool.length)]
-                    append({usageMinutes: faked });
+            Label {
+                id: hoursAccumulated1
+                Component.onCompleted: {
+                    getHourlyData((data) => {
+                        const range = [];
+                        const hours = Object.entries(data.hourly);
+                        const [start]= hours.find(([h, m]) => m > 0);
+                        hours.reverse();
+                        const [current] = hours.find(([h, m]) => m > 0);
+                        range.push(start, current)
+                        hoursAccumulated1.text = `(${range.join(' - ')})`
+                    });
                 }
             }
         }
 
-        Charts.AxisLabels {
-            id: yAxisLabels
-            anchors {
-                right: parent.right
-                top: parent.top
-                bottom: parent.bottom
-            }
-            direction: Charts.AxisLabels.VerticalBottomTop
-            delegate: Label {
-                text: Charts.AxisLabels.label
-            }
-            source: Charts.ArraySource { array: [0, 30, 60] }
-        }
+        Charts.BarChart {
+            id: barChart
+            barWidth: 8
+            spacing: 2
+            radius: 2
 
-        Charts.AxisLabels {
-            id: xAxisLabels
-            anchors {
-                left: parent.left
-                right: yAxisLabels.left
-                bottom: parent.bottom
-            }
-            delegate: Label {
-                text: Charts.AxisLabels.label
-            }
-            // TODO: generate dynamically based on data
-            source: Charts.ArraySource { array: [0, 9, 14] }
-        }
+            width: 128
+            height: 128
+            backgroundColor: Qt.rgba(0.0, 0.0, 0.0, 0.1)
 
+            valueSources: [
+                Charts.ModelSource {
+                    model: barModel
+                    roleName: "usageMinutes"
+                }
+            ]
+
+            yRange {
+                from: 0;
+                to: 60;
+                automatic: false
+            }
+
+            colorSource: Charts.ArraySource { array: [ "#3a94a8" ] }
+
+            ListModel {
+                id: barModel
+                Component.onCompleted: {
+                    const hourlyEvents = [];
+                    getHourlyData((data) => {
+                        for(let hour = 0; hour < Object.keys(data.hourly).length; hour++) {
+                            let usage = data.hourly[hour]
+                            if(usage === 0.0) {
+                                continue
+                            }
+                            append({usageMinutes: usage > 60.0 ? 60 : usage});
+                        }
+                    });
+                }
+            }
+        }
     }
-
 }
-
