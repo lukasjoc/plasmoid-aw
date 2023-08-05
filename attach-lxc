@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# TODO: figure this shit out
+sudo lxc launch images:alpine/edge aggregator-plasmoid-aw
+sudo lxc file push . aggregator-plasmoid-aw/root/app
+sudo lxc exec aggregator_plasmoid_aw -- /bin/sh
+apk update
+apk add go
+
+# cd root/app
+# go build .
+# ./aggregator

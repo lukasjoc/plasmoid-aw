@@ -19,6 +19,10 @@ ColumnLayout {
     PlasmaExtras.Heading {
         type: PlasmaExtras.Heading.Type.Primary
         Layout.alignment: Qt.AlignRight
+        // Component.onCompleted: {
+        //     const r = new XMLHttpRequest()
+        //     // console.log("HEADING ANYONE?")
+        // }
         // TODO: get from api dynamically and format
         text: "5h 28m"
     }
