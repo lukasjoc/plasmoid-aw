@@ -1,25 +1,50 @@
-import QtQuick 2.11
-import QtQuick.Controls 2.11
+import QtQuick 2.15
+import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.2
-import QtQuick.Window 2.11
+import QtQuick.Window 2.15
+import org.kde.kirigami 2.20 as Kirigami
 import org.kde.kquickcontrols 2.0
 import org.kde.plasma.extras 2.0 as PlasmaExtras
 import org.kde.plasma.plasmoid 2.0
 import org.kde.quickcharts 1.0 as Charts
+
 import "main.js" as Main
 
 Item {
+    id: widget
+
+    signal clicked();
+
     Plasmoid.preferredRepresentation: Plasmoid.compactRepresentation
-    Plasmoid.compactRepresentation: ColumnLayout {
-        Component.onCompleted: Main.getLatestHourlyEvents(heading, label, barChart, barModel);
+    Plasmoid.compactRepresentation: Kirigami.Icon {
+        id: compact
+        source: "ktimetracker"
+        active: mouseArea.containsMouse
 
-        Timer {
-            interval: 1000*5;
-            running: true;
-            repeat: true;
-            onTriggered: Main.getLatestHourlyEvents(heading, label, barChart, barModel);
+        MouseArea {
+            id: mouseArea
+            anchors.fill: parent
+            hoverEnabled: true
+            onClicked: {
+                plasmoid.expanded = !plasmoid.expanded
+                widget.clicked();
+            }
         }
+    }
+    Plasmoid.fullRepresentation: ColumnLayout {
+        id: col
 
+        Component.onCompleted: Main.getLatestHourlyEvents(heading, label, barChart, barModel);
+        Connections {
+            target: widget
+            function onClicked() {
+                if(!plasmoid.expanded) {
+                    barModel.clear();
+                    return;
+                }
+                Main.getLatestHourlyEvents(heading, label, barChart, barModel);
+            }
+        }
         spacing: 2;
         RowLayout {
             PlasmaExtras.Heading {
@@ -65,3 +90,4 @@ Item {
         }
     }
 }
+
