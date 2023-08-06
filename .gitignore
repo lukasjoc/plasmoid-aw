@@ -2,3 +2,4 @@ resp.json
 aggregator
 *.log
 plasmoid-activitywatch
+node_modules
