@@ -1,6 +1,6 @@
-module github.com/lukasjoc/plasmoid-activitywatch
+module github.com/plasmoid-aw/aggregator-aw
 
-go 1.20
+go 1.21.0
 
 require github.com/labstack/echo/v4 v4.11.1
 

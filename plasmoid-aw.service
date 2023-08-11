@@ -1,0 +1,10 @@
+[Unit]
+Description=Aggregator Service for the the plasmoid-aw
+After=sshd.service
+
+[Service]
+ExecStart=/usr/bin/aggregator-aw
+User=root
+
+[Install]
+WantedBy=multi-user.target

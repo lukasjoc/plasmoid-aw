@@ -1,4 +1,4 @@
-# plasmoid-activitywatch
+# plasmoid-aw
 
-> A activity/usage timline plasmoid using activitywatch
+> Activity plasmoid using aw (kind of like apples one)
 

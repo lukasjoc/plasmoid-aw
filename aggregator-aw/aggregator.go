@@ -14,6 +14,11 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
+const (
+    HoursPerDay = 24
+    MinutesPerHour = 60
+)
+
 func fatal(err any) {
 	fmt.Fprintf(os.Stderr, "fatal: %v", err)
 	os.Exit(1)
@@ -72,7 +77,7 @@ func (q *QueryBuilder) Add(queryArgs ...string) {
 func (q *QueryBuilder) Build() ([]byte, error) {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	tomorrow := today.Add(24 * time.Hour)
+	tomorrow := today.Add(HoursPerDay * time.Hour)
 	period := fmt.Sprintf(
 		"%s/%s",
 		today.Format("2006-01-02T15:04:05-07:00"),
@@ -88,7 +93,7 @@ func getCurrentEvents() ([]Events, error) {
 
 	var q QueryBuilder
 	q.Add(
-		`events = query_bucket("aw-watcher-window_omega");`,
+        `events = query_bucket(find_bucket("aw-watcher-window_"));`,
 		`summed = sum_durations(events);`,
 		`RETURN = {"events": events, "duration": summed};`,
 	)
@@ -109,7 +114,6 @@ func getCurrentEvents() ([]Events, error) {
 	if err != nil {
 		return nil, err
 	}
-	// os.WriteFile("resp.json", content, fs.ModePerm)
 	var events []Events
 	err = json.Unmarshal(content, &events)
 	if err != nil {
@@ -125,29 +129,20 @@ type HourlyEvent struct {
 
 func FromEvents(events []Events) HourlyEvent {
 	var he HourlyEvent
-	he.Hourly = make([]float64, 24)
+	he.Hourly = make([]float64, HoursPerDay)
 	e := events[0]
 	byHours := e.ByHours()
 	for _, hour := range e.hours {
 		summed := sumDurations(byHours[hour])
-		he.Hourly[hour] = (summed / 60.0)
+		he.Hourly[hour] = (summed / MinutesPerHour)
 	}
-	he.Accumulated = (e.Duration / 60.0)
+	he.Accumulated = (e.Duration /  MinutesPerHour)
 	return he
 }
 
 func main() {
 	e := echo.New()
-	f, err := os.OpenFile("access.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		fatal(err)
-	}
-	defer f.Close()
-	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
-		Format: "${method} ${status} ${uri} ${latency_human}\n",
-		Output: f,
-	}))
-
+    e.Use(middleware.Logger())
 	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{Level: 5}))
 	e.Use(middleware.CSRF())
 	e.GET("/hourly", func(c echo.Context) error {
@@ -155,8 +150,12 @@ func main() {
 		if err != nil {
 			return err
 		}
-		bl, _ := json.Marshal(FromEvents(events))
+		bl, err := json.Marshal(FromEvents(events))
+        if err != nil {
+            return err
+        }
 		return c.JSONBlob(http.StatusOK, bl)
 	})
 	e.Logger.Fatal(e.Start(":3343"))
 }
+

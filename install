@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -Cex
+
+# Move the plasmoid to the stuff
+installsite="$XDG_DATA_HOME/plasma/plasmoids/com.github.lukasjoc.activitywatch/"
+rm -rf "$installsite"; mkdir -p "$installsite"
+cp -r "$PWD"/package/* "$installsite"
+
+# Build the shit
+cd ./aggregator-aw/; go build -race -o aggregator-aw;
+sudo mv aggregator-aw /usr/bin/aggregator-aw
+cd - >& /dev/null
+
+# The service dings
+service_name="plasmoid-aw.service"
+service_path="/etc/systemd/system/$service_name"
+sudo rm -rf "$service_path"; sudo systemctl daemon-reload
+
+sudo cp ./plasmoid-aw.service "$service_path"
+sudo chown root:root "$service_path"
+sudo chmod 755 "$service_path"
+
+sudo systemctl stop "$service_name"
+sudo systemctl start "$service_name"
+sudo systemctl status "$service_name"
+sudo systemctl enable "$service_name"
+
+# What up??
+echo "$?"

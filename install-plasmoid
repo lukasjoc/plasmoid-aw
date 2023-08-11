@@ -1,8 +1,0 @@
-#!/bin/bash
-
-set -Cex
-
-installsite="$XDG_DATA_HOME/plasma/plasmoids/com.github.lukasjoc.activitywatch/"
-rm -rf "$installsite"; mkdir -p "$installsite"
-cp -r "$PWD"/package/* "$installsite"
-echo "$?"
